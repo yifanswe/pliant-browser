@@ -2,11 +2,16 @@
 
 ### Don't ask your browser for a feature. Ask your AI to make it yours.
 
-**An AI-native browser architecture where your interface and browser behavior are yours to rewrite, while the foundation keeps getting security updates.**
+**Infrastructure for your AI to build your browser. Ready-to-use browsers when you just want to browse.**
 
-An agent that clicks websites is useful. An agent that can reshape the browser you use every day changes who gets to design the product.
+Pliant has two intended deliverables:
 
-Pliant starts with a different question: **what should a browser look like when every user has a software engineer?**
+1. **A browser-building platform for users and their AI.** Stable, extensible infrastructure for creating a personal browser's entire interface and behavior without forking its foundation.
+2. **One or more ready-to-use browsers built on that platform.** Convenient defaults that also demonstrate what users can build through the same public interfaces.
+
+**Our design principle: flexibility of customization with safety guards.**
+
+AI should help you change the browser itself, not merely operate websites inside a product someone else designed. The platform must keep enforcing its safety boundaries while your browser evolves, and keep supporting infrastructure updates without requiring AI.
 
 > **Status: design proposal.** This repository describes the architecture and the questions it must answer. There is no browser binary, implemented DSL, or verified compatibility guarantee yet.
 
@@ -21,6 +26,27 @@ Pliant proposes a different arrangement:
 **The community maintains a stable browser foundation. Users and their AI build the browser experience on top.**
 
 A default browser ships as a useful starting point. Its interface and higher-level services should use the same public contracts available to user customizations. The official design gets no private shortcut that makes an alternative impossible.
+
+## What the platform should provide
+
+The initial scope has four foundations:
+
+| Foundation | Responsibility |
+| --- | --- |
+| **Web-engine abstraction** | Expose page creation, rendering, navigation, input, and lifecycle through stable contracts over an existing engine. Report platform capabilities rather than pretending every engine behaves identically. |
+| **Profile and data abstraction** | Manage account isolation, cookies and site storage, passwords and passkeys, permissions, history, bookmarks, and session data. Provide extension interfaces for providers and policies without bypassing core access controls. |
+| **Comprehensive local validation suite** | Let users and their AI test custom code against lifecycle, functional, security, accessibility, and upgrade scenarios. Combine deterministic tests, generated cases, fault injection, and real-browser checks. Passing tests is evidence, not proof of safety for every possible program. |
+| **Declarative UI engine** | Render a complete browser interface written in a concise language, including state bindings and interactions. Support platform-specific layouts over shared contracts, not merely themes or fixed extension slots. |
+
+### Supporting mechanisms under discussion
+
+The following are architectural recommendations, not settled implementation choices:
+
+- **A permissioned plugin runtime.** Define service replacement, event hooks, plugin lifecycle, conflicts, and resource limits. Enforce safety during execution, including paths no test anticipated.
+- **Customization lifecycle and compatibility.** Define package versions, dependency and capability requirements, isolated previews, explicit activation, migrations, and recovery. UI fallback must not silently replace privileged service policies.
+- **An authoring interface for the user's AI.** Publish machine-readable contracts, examples, local validation commands, and actionable diagnostics. Let an existing coding agent inspect capabilities and iterate without depending on a particular model or embedded assistant.
+
+These mechanisms should serve the four foundations rather than grow into unrelated platform features.
 
 ## More than a sidebar you can theme
 
