@@ -77,9 +77,19 @@ The DSL would describe layouts, observable state, local presentation models, and
 
 This distinction matters: arbitrary Swift code does not become safe because its UI uses SwiftUI. A declarative language is not a sandbox either. Runtime enforcement must make the boundaries real.
 
-The first engine backend is CEF (Chromium Embedded Framework), targeting Linux, macOS, and Windows. CEF hosts web content; Pliant provides its own native UI without Electron. Start with one backend behind stable contracts rather than implementing multiple engines at once. The DSL syntax, native UI framework, and plugin runtime remain open. Compatibility with Chrome extensions is not a requirement.
+The first engine backend is CEF (Chromium Embedded Framework), targeting Linux, macOS, and Windows. CEF hosts web content; Pliant provides its own native UI without Electron. Start with one backend behind stable contracts rather than implementing multiple engines at once. The DSL syntax, native UI framework, and plugin runtime remain open. Compatibility with Chrome/Firefox extensions is explicitly out of scope.
 
 Lightweight operation remains a goal, not a measured result. Bundling CEF has a distribution cost; startup time, memory, and power consumption require real measurements.
+
+## Native customization, not extension compatibility
+
+Pliant will not implement the Chrome/Firefox extension compatibility layer or support installing their existing extension packages. This is a product boundary, not merely a lower-priority feature.
+
+Users and their local coding agents should implement changes through Pliant plugins, service providers, and declarative layouts. These may be created locally or reused and adapted from shared Pliant packages; users do not have to rebuild every tool from scratch.
+
+This removes the obligation to reproduce another browser's extension API, but it does not make every extension capability automatically available. Pliant must expose the necessary mechanisms through its own permissioned contracts. Missing capabilities belong in platform design discussions; local code cannot bypass the core to obtain them.
+
+Generating a custom plugin does not require running AI during everyday use. Its permissions, validation, lifecycle, and upgrade rules remain the same whether a human or an agent wrote it.
 
 ## One personal browser, different devices (future direction)
 
