@@ -104,7 +104,9 @@ Your UI must depend on a stable contract, not a Chromium internal class or the c
 
 The foundation should handle engine changes, storage migrations, and system integration behind that contract. Compatibility adapters and deterministic migrations should handle supported upgrades without an AI call. AI can help when a customization needs redesign; it must not be required for ordinary upgrades or everyday browsing.
 
-If a customization cannot run on a new version, the browser should preserve it, disable the incompatible part, and provide the default experience. **A personal sidebar must never hold a security update hostage.**
+If a UI customization cannot run on a new version, the browser should preserve it and offer a safe default interface. An incompatible credential provider, account-routing policy, or other privileged plugin requires different handling: stop affected operations and ask for explicit approval before substituting a service or policy. A UI fallback must never silently change account, credential, or privacy behavior.
+
+**A personal sidebar must never hold a security update hostage.** Updating the foundation must remain possible even when affected plugin operations are disabled.
 
 Stable contracts do not mean immutable implementation. They mean deliberate versioning, supported compatibility windows, and explicit handling of breaking changes.
 
