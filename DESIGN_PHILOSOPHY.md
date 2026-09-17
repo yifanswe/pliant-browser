@@ -1,6 +1,6 @@
 # Design philosophy
 
-[Back to Pliant](README.md)
+[Back to Pliant](README.md) · [Implementation plan](IMPLEMENTATION_PLAN.md)
 
 **Flexibility of customization with safety guards.**
 

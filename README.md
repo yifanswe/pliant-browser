@@ -2,7 +2,7 @@
 
 **Infrastructure for your AI to build your browser.**
 
-[Design philosophy](DESIGN_PHILOSOPHY.md) · [Discuss an idea](https://github.com/yifanswe/pliant-browser/issues)
+[Design philosophy](DESIGN_PHILOSOPHY.md) · [Implementation plan](IMPLEMENTATION_PLAN.md) · [Discuss an idea](https://github.com/yifanswe/pliant-browser/issues)
 
 ![Pliant: one foundation, your browser on every device. Concept illustration.](assets/hero.png)
 
