@@ -8,7 +8,7 @@ Build infrastructure that lets users and their chosen coding agents create a per
 
 **Design principle: flexibility of customization with safety guards.**
 
-This is an implementation roadmap, not a record of completed work. The repository currently contains design documents and concept illustrations. It does not contain a working browser, DSL compiler, plugin runtime, or SDK.
+This is an implementation roadmap, not a record of completed work. The repository currently contains design documents, concept illustrations, a module-boundary scaffold, and a repository structure check. It does not contain a working browser, CEF integration, native shell, DSL compiler, plugin runtime, or SDK.
 
 The first proof is deliberately concrete:
 
@@ -51,7 +51,9 @@ An official service may need privileges that a layout does not need. Those privi
 
 ### Proposed repository boundaries
 
-These paths are proposed implementation targets, not existing code. File extensions and build commands will follow the selected languages.
+These paths now exist as documentation-only scaffolds. They remain proposed
+implementation targets: no product module or API is implemented, and file
+extensions and build commands will follow the selected languages.
 
 | Path | Responsibility |
 | --- | --- |

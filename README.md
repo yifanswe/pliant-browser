@@ -1,8 +1,8 @@
 # Pliant
 
-**Infrastructure for your AI to build your browser.**
+**Infrastructure for your Coding Agent to build your browser.**
 
-[Design philosophy](DESIGN_PHILOSOPHY.md) · [Implementation plan](IMPLEMENTATION_PLAN.md) · [Discuss an idea](https://github.com/yifanswe/pliant-browser/issues)
+[Design philosophy](DESIGN_PHILOSOPHY.md) · [Implementation plan](IMPLEMENTATION_PLAN.md) · [Module map](MODULES.md) · [Discuss an idea](https://github.com/yifanswe/pliant-browser/issues)
 
 ![Pliant: one foundation, your browser on every device. Concept illustration.](assets/hero.png)
 
@@ -10,7 +10,20 @@ Pliant proposes a browser-building platform where users and their AI can replace
 
 We also plan to provide **one or more ready-to-use browsers**: convenient defaults and reference implementations built through the same public interfaces available to everyone.
 
-> **Design proposal.** No browser binary or working SDK is available yet. Images illustrate the broader concept, including deferred mobile layouts, not shipped functionality.
+The repository now includes a documentation-only
+[module scaffold](MODULES.md). It defines intended ownership and dependency
+boundaries without choosing the host language, native UI framework, UI DSL, or
+plugin runtime.
+
+Check the scaffold and local Markdown links with:
+
+```sh
+python3 tools/check_structure.py
+python3 -m unittest discover -s tests -p "test_*.py"
+```
+
+These commands test repository structure only. They do not build, run, or test
+a browser.
 
 ## Customization with safety guards
 
