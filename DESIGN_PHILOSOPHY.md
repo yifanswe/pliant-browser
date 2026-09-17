@@ -26,7 +26,7 @@ The platform has six responsibilities:
 
 | Component | Responsibility |
 | --- | --- |
-| Web-engine abstraction | Stable page, rendering, navigation, input, and lifecycle contracts over an existing engine. |
+| Web-engine abstraction | Stable page, rendering, navigation, input, and lifecycle contracts, initially backed by CEF. |
 | Profile and data management | Account isolation, passwords, passkeys, cookies, site storage, permissions, history, bookmarks, and session data, with extensible providers and policies. |
 | Plugin runtime | Service replacement, event hooks, permissions, resource limits, conflict handling, and failure isolation. |
 | Declarative UI engine | A concise language for complete interfaces, state bindings, and interactions, with desktop and mobile layout variants. |
@@ -77,9 +77,11 @@ The DSL would describe layouts, observable state, local presentation models, and
 
 This distinction matters: arbitrary Swift code does not become safe because its UI uses SwiftUI. A declarative language is not a sandbox either. Runtime enforcement must make the boundaries real.
 
-The initial implementation target is a lightweight, native macOS application, without Electron. The architecture should support desktop and mobile platforms rather than bind the customization format to macOS. SwiftUI is a candidate rendering layer; the DSL syntax, plugin runtime, and web-engine integration remain open. Compatibility with Chrome extensions is not a requirement.
+The first engine backend is CEF (Chromium Embedded Framework), targeting Linux, macOS, and Windows. CEF hosts web content; Pliant provides its own native UI without Electron. Start with one backend behind stable contracts rather than implementing multiple engines at once. The DSL syntax, native UI framework, and plugin runtime remain open. Compatibility with Chrome extensions is not a requirement.
 
-## One personal browser, different devices
+Lightweight operation remains a goal, not a measured result. Bundling CEF has a distribution cost; startup time, memory, and power consumption require real measurements.
+
+## One personal browser, different devices (future direction)
 
 A desktop sidebar should not become a miniature sidebar on a phone. Users should be able to import or upload separate desktop and mobile layouts in one personal browser package, or ask their AI to create those variants.
 
@@ -89,7 +91,7 @@ The DSL would declare layout variants and required capabilities. Each platform w
 
 Sharing a customization package is separate from syncing browsing data. Uploading layouts must not implicitly upload cookies, passwords, history, or account credentials. Package distribution, user-data synchronization, and per-device permissions need separate controls.
 
-Cross-platform support is an architectural goal, not a shipped feature. The first implementation can remain macOS-first without making every user's customization macOS-only.
+Current implementation scope is Linux, macOS, and Windows. Mobile support is deferred; the examples above describe a future direction, not current delivery commitments.
 
 ## Two promises the architecture has to earn
 
