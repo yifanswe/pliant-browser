@@ -80,7 +80,19 @@ The DSL would describe layouts, observable state, local presentation models, and
 
 This distinction matters: arbitrary Swift code does not become safe because its UI uses SwiftUI. A declarative language is not a sandbox either. Runtime enforcement must make the boundaries real.
 
-The initial direction is a lightweight, native macOS application, without Electron. SwiftUI is a candidate rendering layer; the DSL syntax, plugin runtime, and web-engine integration remain open. Compatibility with Chrome extensions is not a requirement.
+The initial implementation target is a lightweight, native macOS application, without Electron. The architecture should support desktop and mobile platforms rather than bind the customization format to macOS. SwiftUI is a candidate rendering layer; the DSL syntax, plugin runtime, and web-engine integration remain open. Compatibility with Chrome extensions is not a requirement.
+
+## One personal browser, different devices
+
+A desktop sidebar should not become a miniature sidebar on a phone. Users should be able to import or upload separate desktop and mobile layouts in one personal browser package, or ask their AI to create those variants.
+
+The intended experience shares browser concepts and compatible plugin behavior while allowing each platform its own interface. A desktop layout might use nested workspaces and keyboard commands; its mobile counterpart might use a bottom tab switcher and touch actions over the same logical organization.
+
+The DSL would declare layout variants and required capabilities. Each platform would render the appropriate variant through its native implementation. Plugins would use versioned service contracts, with platform adapters where necessary. A portable contract does not make arbitrary plugin code portable: unsupported capabilities must be reported, and privileged behavior must never be silently substituted.
+
+Sharing a customization package is separate from syncing browsing data. Uploading layouts must not implicitly upload cookies, passwords, history, or account credentials. Package distribution, user-data synchronization, and per-device permissions need separate controls.
+
+Cross-platform support is an architectural goal, not a shipped feature. The first implementation can remain macOS-first without making every user's customization macOS-only.
 
 ## Two promises the architecture has to earn
 
