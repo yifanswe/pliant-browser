@@ -1,11 +1,14 @@
 # UI
 
-**Responsibility:** eventually define and implement the declarative UI package
-boundary, validation, state bindings, interactions, and native rendering.
+**Responsibility:** define the declarative UI package boundary, validation,
+state bindings, interactions, and native rendering.
 
 **Boundary:** UI code uses public operations and observable state. It cannot
 access Chromium, protected profile data, credentials, or core implementation details.
-The DSL syntax, host language, and native UI framework remain undecided.
+The broader DSL syntax, host language, and native UI framework remain open.
 
-**Status:** scaffold only; there is no compiler, renderer, or UI API. See the
+**Status:** [`definition/`](definition/) implements the bounded JSON definition,
+validation, preview/apply/reject/reset state machine, and address-open policy
+used by the native customization demo. The AppKit renderer remains app-local;
+there is no general UI runtime or plugin-facing UI API yet. See the
 [module map](../MODULES.md).

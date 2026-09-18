@@ -1,0 +1,12 @@
+[package]
+name = "pliant-ui-definition"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+serde = "=1.0.229"
+serde_json = "=1.0.151"
+
+[lints.rust]
+unsafe_code = "forbid"

@@ -4,7 +4,7 @@
 are a design, not implemented interfaces or a stable ABI. Runtime behavior,
 native integration, and security guarantees still require real-browser evidence.
 
-[Module boundary](README.md) · [Decision](../../docs/decisions/0001-own-chromium-embedding.md) · [Philosophy](../../DESIGN_PHILOSOPHY.md) · [Capability evidence](../../docs/contracts/engine-capabilities.md)
+[Module boundary](README.md) · [Decision](../docs/decisions/0001-own-chromium-embedding.md) · [Philosophy](../DESIGN_PHILOSOPHY.md) · [Capability evidence](../docs/contracts/engine-capabilities.md)
 
 ## 1. The model in one minute
 
@@ -17,24 +17,25 @@ The basic flow resembles CEF:
 1. Start one engine runtime in the native host; initialize Chromium's child-process entry points as required.
 2. Open an explicit engine context for a core-selected profile.
 3. Create a live page in that context. It initially contains a blank document and does not activate a window.
-4. Attach its content view to a native surface when presentation is needed.
+4. Attach its embedder-owned content surface to a platform-owned native container when presentation is needed.
 5. Navigate the page; observe state changes and handle requests through core.
 6. Close pages, release contexts, and shut down in that order.
 
-The critical distinction is **page != tab != surface != task**. A page can move
-between layouts without changing account context or reloading. A task can own
-several pages without owning the human's window. A preset can reorganize pages
-without acquiring direct engine authority.
+The model here is **runtime, context, page/document, and content surface**.
+UI organization and application workflows are outside this module; they do not
+appear as embedder objects or command fields. A page owns browsing state; its
+surface handles presentation. Attaching or detaching that surface must not, by
+itself, recreate the page, reload its document, or change its profile binding.
 
 ### Familiar CEF concepts, different public boundary
 
 | CEF concept | Proposed Pliant equivalent | Deliberate difference |
 | --- | --- | --- |
 | Application/process callbacks | `EngineRuntime` and trusted `EngineHost` | Only trusted bootstrap code runs here; no personal-package initialization in renderer/helper processes. |
-| Request context | `EngineContext` | An explicitly selected profile, no global/default account fallback. Context lifetime is independent of windows and tasks. |
-| Browser | `PageRef` | A live content instance, not a tab widget or permanent Chromium identifier. |
+| Request context | `EngineContext` | An explicitly selected profile, no global/default account fallback. Context lifetime is independent of presentation. |
+| Browser | `PageRef` | A live content instance, not a UI control or permanent Chromium identifier. |
 | Frame | `DocumentRef` | Exact frame-document and activation identity, not a raw frame pointer that may survive a navigation. |
-| Native browser view | `ViewRef` bound to a `SurfaceLease` | Presentation and foreground activation are separate from page creation and navigation. |
+| Native browser view | Embedder-owned `SurfaceRef` attached through a `NativeContainerLease` | The embedder manages the Chromium content surface; the platform host owns the native container. Presentation and activation remain separate. |
 | Client/handler callbacks | Events, pending requests, and fast decision snapshots | Observation cannot authorize an action. Slow policy services are never called synchronously from an engine hook. |
 
 We borrow the model, not CEF's API/ABI, Views toolkit, browser styles, or code.
@@ -58,14 +59,16 @@ flowchart TD
     Core -->|validated commands and decisions| Port[Engine-neutral port]
     Port --> Embedder[Pliant Chromium embedder]
     Embedder -->|events and scoped requests| Core
-    Platform[Trusted native host] <-->|surface and event-loop integration| Embedder
+    Platform[Native host: owns windows and containers] <-->|container leases and event-loop integration| Embedder
+    Embedder --> Surface[Embedder-owned content surface]
     Embedder --> Content[Chromium Content and selected services]
+    Surface <-->|native content-view integration| Content
     Content --> Workers[Sandboxed renderers and other processes]
 ```
 
 This is a runtime interaction diagram, not permission for core to import
 Chromium or for the embedder to import a platform implementation. Native
-facilities are injected through host interfaces; see [MODULES.md](../../MODULES.md).
+facilities are injected through host interfaces; see [MODULES.md](../MODULES.md).
 
 The first version uses an in-process trusted core/engine boundary. That boundary
 is an ownership/API boundary, **not a sandbox against malicious native code in
@@ -77,12 +80,12 @@ runtime. Chromium's renderer sandbox and origin checks remain in force.
 | Object/value | Owner and lifetime | Meaning |
 | --- | --- | --- |
 | `EngineRuntime` | Native bootstrap; one initialized runtime per host process lifetime | Chromium services, engine sequence, context registry, and event delivery. No arbitrary initialize/shutdown/reinitialize cycle. |
-| `ProfileId`, `PageId`, `OperationId` | Core | Pliant identities. Persistence, restoration, actor access, and task membership are core concerns. |
+| `ProfileId`, `PageId`, `OperationId` | Core | Pliant identities. Core owns persistence, restoration, and authorization; the embedder uses these values for identity binding and operation correlation. |
 | `ContextRef` | Embedder; from context open until release | Opaque live-context handle associated with one `ProfileId`. Includes runtime/incarnation identity internally. |
 | `PageRef` | Embedder; from page creation until destruction | A `PageId` bound to one live page incarnation and one immutable `ContextRef`. |
 | `DocumentRef` | Embedder; valid for a frame's current, active document | Includes page incarnation, frame-document identity, and activation generation internally. Used for document-sensitive work and requests. |
-| `SurfaceLease` | Trusted platform host, registered for core-approved hosting | A native container and its lifetime, not a window-selection policy or a plugin-supplied pointer. |
-| `ViewRef` | Embedder and platform host through an explicit attachment | A page-to-surface binding with a geometry revision. It does not own the page's browsing identity. |
+| `SurfaceRef` | Embedder; one live presentation attachment until detach, page closure, or loss | The page's Chromium-backed content presentation, with a revisioned native-container binding. It does not own the page's browsing identity. |
+| `NativeContainerLease` | Trusted platform host; borrowed by the embedder while attached | A registered native container and a lifetime agreement. The host owns the OS container; the lease is not a plugin-supplied pointer or authority to activate a window. |
 | `ViewportRevision` | Embedder; changes when a page's input coordinate space changes | Geometry belongs to the page even while unpresented. It is distinct from a native attachment, so background targeting does not need a fabricated window. |
 | `RequestRef` | Embedder; until resolution, expiry, or invalidation | One pending engine request and its private Chromium continuation. |
 | `DownloadRef` | Embedder; context-scoped | A transfer can outlive its initiating page. Closing the page does not silently cancel an authorized download. |
@@ -91,6 +94,24 @@ All live references are opaque, typed, process-local values. They are not
 serialized into personal packages or reused after a runtime restart. Core may
 restore the same logical `PageId`, but the new `PageRef` has a new incarnation;
 old commands fail with `StaleReference` rather than targeting the replacement.
+
+### Content surface versus native container
+
+**The embedder owns the content surface:** the presentation abstraction that
+works directly with Chromium's content view, rendering, viewport state, and
+input routing. In v0 it uses native content-view hosting. It is not a public
+Chromium compositor object, raw GPU texture, or separate UI framework.
+
+**The platform host owns the native container:** the OS window/view hierarchy
+that accepts the content surface. It supplies a `NativeContainerLease`, not
+ownership of that window, to the embedder. The embedder manages attachment and
+engine-side resources; the host keeps the container alive until detach completes.
+
+`SurfaceRef` identifies a live presentation attachment. Detach invalidates the
+reference and its native input binding, but preserves the page. Reattachment
+returns a fresh reference; whether Chromium retains or recreates underlying
+presentation resources remains private. Closing a page also releases its
+attachment. V0 permits at most one interactive attachment per page.
 
 ### Contexts and storage
 
@@ -145,9 +166,10 @@ promise that Chromium has a matching function. No Chromium, OS, or Rust/C++ ABI
 types appear in the core-facing value model.
 
 Every operation submission also carries a `CommandHeader` with a **core-assigned
-`OperationId`**, omitted from the tables for readability. Core records the real
-caller/task and authorization before submission. The engine echoes this ID but
-does not trust an actor label as a grant. IDs are unique within the runtime and
+`OperationId`**, omitted from the tables for readability. Core authorizes the
+submission and keeps higher-layer attribution outside the embedder. The engine
+echoes the operation ID; caller or workflow metadata is not part of this command
+header and cannot confer authority. IDs are unique within the runtime and
 duplicates are rejected, never replayed; a retry is a new authorized operation.
 
 ### 4.1 Runtime and contexts
@@ -165,7 +187,7 @@ duplicates are rejected, never replayed; a retry is a new authorized operation.
 and resource settings. It does not expose `disable_sandbox`, single-process mode,
 arbitrary Chromium switches, or a debugging port to personal packages.
 
-The embedder and platform use Chromium's native message-loop/task-runner
+The embedder and platform use Chromium's native event-loop and scheduling
 integration. V0 does not promise a portable manual `Pump()` method or support
 for an arbitrary UI event loop before that integration is demonstrated.
 
@@ -183,10 +205,9 @@ for an arbitrary UI event loop before that integration is demonstrated.
 
 `CreatePage` has no initial-URL parameter in v0; ordinary host-created pages
 start at `about:blank`. `PageOptions` declares initial viewport and bounded
-resource limits, not tab position, folder membership, account-routing rules,
-or task semantics. The
-context binding is immutable. Opening the same URL in another account means a
-new page/context choice through core, not editing a live page's identity.
+resource limits only; UI organization and application workflow state are not
+accepted. The context binding is immutable. Opening the same URL in another
+account means a new page/context choice through core, not editing a live page's identity.
 `Navigate` does not rerun account routing: it stays in the target page's context.
 
 Keep creation and navigation separate. A core-level convenience operation may
@@ -212,22 +233,24 @@ Web-origin security and normal engine-mediated subresource behavior still apply.
 
 | Operation | Contract |
 | --- | --- |
-| `AttachView(PageRef, SurfaceLease, ViewState) -> Op<ViewRef>` | Attach the existing content view to an authorized native container without activation. At most one live interactive attachment per page in v0. |
-| `UpdateView(ViewRef, expected_revision, ViewState) -> Op<ViewRevision>` | Update bounds, scale, and visibility with explicit coordinate conventions. Reject stale attachment/geometry revisions. |
-| `DetachView(ViewRef) -> Op<void>` | Release the attachment and native references; the page stays alive, unpresented. The host must not destroy a leased container before detach completes. |
-| `SetViewport(PageRef, expected_revision, ViewportState) -> Op<ViewportRevision>` | Set geometry for an unpresented page. When a native view is attached, its geometry is authoritative and this command fails `Busy`; changes through that view also advance the page viewport revision. |
-| `RequestFocus(ViewRef, FocusIntent) -> Op<FocusOutcome>` | A separate core-authorized action: focus within the existing foreground window or explicitly request activation. Report actual platform outcome; never smuggle this into navigation. |
+| `AttachSurface(PageRef, NativeContainerLease, SurfaceState) -> Op<SurfaceRef>` | Establish embedder-owned content presentation in an authorized native container without activation. At most one live interactive attachment per page in v0. |
+| `UpdateSurface(SurfaceRef, expected_revision, SurfaceState) -> Op<SurfaceRevision>` | Apply native bounds, scale, and visibility to the content surface. Reject stale attachment/geometry revisions; never reposition or restyle the surrounding UI. |
+| `DetachSurface(SurfaceRef) -> Op<void>` | Release the attachment and borrowed native-container references, invalidating this handle; the page stays alive, unpresented. The host must not destroy a leased container before completion. |
+| `SetViewport(PageRef, expected_revision, ViewportState) -> Op<ViewportRevision>` | Set geometry for an unpresented page. When a surface is attached, its geometry is authoritative and this command fails `Busy`; changes through that surface also advance the page viewport revision. |
+| `RequestFocus(SurfaceRef, FocusIntent) -> Op<FocusOutcome>` | A separate core-authorized action: focus within the existing foreground window or ask the platform host to activate it. Report actual platform outcome; never smuggle this into navigation. |
 | `SendInput(DocumentRef, ViewportRevision, InputEvent) -> Op<InputOutcome>` | Page-scoped pointer, wheel, key, or text input through the engine's supported path, including unpresented pages only when supported. Reject stale targets/coordinates. Dispatch completion is not proof of a DOM change or remote success. |
 
-`ViewState` uses logical viewport coordinates plus explicit device scale and
-visibility. Platform integration performs OS coordinate conversion. The
-embedder renders the website; Pliant lays out the native container and its own
-browser chrome. No page pixels need to cross the core event stream.
+`SurfaceState` uses logical viewport coordinates plus explicit device scale and
+visibility. The host supplies the container's geometry; the embedder's platform
+bridge translates it for Chromium. Chromium renders the website through the
+embedder-owned surface; surrounding UI layout remains outside this module.
+No page pixels need to cross the core event stream.
 
-Native user input already routed to the registered view need not round-trip
-through a plugin or UI command dispatcher for every keystroke. Its surface
-binding, focus ownership, and lifetime are trusted host responsibilities. Agent
-input does go through core authorization and exact engine targets.
+Native input already routed to the attached content surface need not round-trip
+through a plugin or UI command dispatcher for every keystroke. The embedder
+validates its surface binding and lifetime; the platform host manages OS focus
+and native event delivery. Programmatic input goes through core authorization
+and exact engine targets.
 
 For viewport input, the primary `DocumentRef` is a stale-document guard, not an
 atomic DOM-element target. Chromium still performs hit testing and frame routing;
@@ -235,11 +258,11 @@ content or subframes can change before an event is handled. V0 does not promise
 that coordinate input reaches a previously observed element. Document changes
 after dispatch are reported, not undone.
 
-**Background is not a focus flag.** A background page must not activate the
-human's window, change the selected page, or steal the OS input responder.
+**Background is not a focus flag.** A background page must not activate a
+window, redirect input to another surface, or steal the OS input responder.
 Document-local input focus and native application focus are different concerns.
-Hidden content may be throttled or not painted; v0 does not promise active-tab
-performance or a bitmap for a never-presented page.
+Hidden content may be throttled or not painted; v0 does not promise
+foreground-page performance or a bitmap for a never-presented page.
 
 Expose `background_input` only after the real native scenario passes. If an
 operation requires foreground interaction, return `NeedsForeground` and let
@@ -247,9 +270,9 @@ core arrange a handoff. Do not synthesize global OS clicks or fake a user gestur
 to bypass a web-platform permission rule. OSR, arbitrary transforms, simultaneous
 mirrors of one page, and semantic DOM automation are separate future capabilities.
 
-Unexpected loss of a native container emits `SurfaceLost`, revokes that view's
-input binding, and leaves page cleanup to core. Moving from a sidebar preset to
-a tab-bar preset must not, by itself, close or recreate the page.
+Unexpected loss of a native container emits `SurfaceLost`, invalidates its
+`SurfaceRef` and input binding, and leaves page cleanup to core. Replacing the
+container must not, by itself, close or recreate the page.
 
 ### 4.4 Host decisions and observations
 
@@ -281,13 +304,13 @@ report a revocation complete until its valid update/invalidation is acknowledged
 ### Observation: no decision required
 
 Examples are page created/closed, URL/title/security state, navigation progress,
-document activation, loading state, audio state, view loss, renderer failure,
+document activation, loading state, audio state, surface loss, renderer failure,
 and operation completion. An observer cannot change the event's historical
 outcome or gain authority by returning a value.
 
 Events carry a runtime sequence, relevant context/page/document references, and
 an operation correlation ID when known. Engine-originated activity is not
-automatically attributed to the last agent command; report an unknown or
+automatically attributed to the last host command; report an unknown or
 page/worker source instead of inventing causality.
 
 ### Deferred request: an explicit continuation exists
@@ -438,7 +461,7 @@ does not substitute an ephemeral context or another profile.
 | Context | `Opening -> Open -> Releasing -> Released`. No creation or new services during release. Failed release reports the actual remaining state; it does not license deleting live data. |
 | Page | `Creating -> Live -> Closing -> Closed`; unload refusal returns to `Live`. Repeated concurrent close requests join one close attempt rather than prompting twice. A closed incarnation stays invalid. |
 | Renderer/document | Failure invalidates affected document targets and requests. The page can remain as a failed content instance for inspection/recovery; it is not automatically replaced or reloaded. |
-| Attachment | `Attached -> Detaching -> Detached` or `SurfaceLost`. Detaching presentation does not destroy the page. |
+| Surface attachment | `Attached -> Detaching -> Detached` or `SurfaceLost`. The embedder invalidates the surface reference on detach/loss and releases the native-container lease; the page survives. Page closure also tears down any attachment. |
 
 Core owns a **separate, explicitly authorized recovery path** for aborting
 unresponsive pages/processes. No ordinary close API exposes a casual
@@ -447,7 +470,7 @@ must report that scope; it is not a page-local cancellation guarantee.
 
 Before context destruction, all pages and context-dependent delegates/services
 must reach their required teardown points, including downloads and storage
-partitions. Closing the last tab alone does not prove that service workers or
+partitions. Closing the last page alone does not prove that service workers or
 network/storage work have stopped. Start with offline backup/migration after
 complete engine shutdown; v0 does not promise an online consistent profile copy.
 
@@ -455,11 +478,11 @@ complete engine shutdown; v0 does not promise an online consistent profile copy.
 
 | Replaceable choice | Mechanism that remains invariant |
 | --- | --- |
-| Sidebar, horizontal tabs, command palette, or split layout | All layouts refer to core pages; view attachment cannot change identity or account. Split layout uses several page views, not a special engine workspace model. |
+| Native presentation and layout | Host-selected containers receive embedder-owned content surfaces. Layout changes do not alter page identity or account, and there is no engine layout model. |
 | Account-routing service | Provider proposes a profile; core validates access before creating a context/page. No unauthorized profile enumeration or implicit fallback. |
 | Site-permission or download policy | Provider supplies a proposal; core validates it; scoped engine decisions enforce liveness and origin/context constraints. |
 | Session organization/restoration | Core/policy chooses what to restore; the engine creates new incarnations. History replay and restored UI state do not authorize remote writes. |
-| Human versus agent workflow | Both use core operations; task attribution remains in core. Explicit input targets and presentation/activation separation prevent using the human's UI as the transport. |
+| Authorized callers | The embedder executes the same core-authorized operations regardless of the higher-layer caller. Exact targets and separate activation keep programmatic work independent of UI organization. |
 | UI/plugin upgrade | Public package contracts evolve independently from private Chromium interfaces. Incompatible privileged providers block affected work; a UI fallback cannot silently change policy. |
 
 Malleability means **different policies over dependable mechanisms**, not every
@@ -467,25 +490,22 @@ Chromium preference becoming user-editable. The trusted recovery interface,
 origin security, data isolation, and permission enforcement cannot be replaced
 by a layout. Official presets use the same public core API as personal ones.
 
-### Example: open and work without selecting the human's tab
+### Example: create and navigate without foreground activation
 
-Conceptual core-side use, not a proposed user/plugin bypass. Each engine call
-also receives the core's command header; it is elided here for readability:
+Core supplies an authorized context, reserved page identity, and navigation
+parameters. How higher layers organize that page is not part of this API.
+Each call also receives core's command header, elided here for readability:
 
 ```text
-profile = core.authorize_routing_result(caller, routing_service.choose(link))
-context = core.get_or_open_context(profile)
-page_id = core.reserve_page(task, profile)  # Ownership exists before dispatch.
 page = await engine.CreatePage(page_id, context, page_options)
-core.bind_live_page(page_id, page)  # Creation failure releases the reservation.
-
-outcome = await engine.Navigate(page, navigation_for(link))
+outcome = await engine.Navigate(page, navigation)
 # A failure is reported against this page; there is no substitute profile.
-# No AttachView or RequestFocus was implied by Navigate.
+# Neither operation attaches a surface or requests focus.
 
-# Only after explicit presentation/handoff authorization:
-view = await engine.AttachView(page, host.lease_container(), view_state)
-await engine.RequestFocus(view, approved_focus_intent)
+# Presentation uses a separately authorized, host-owned native container:
+surface = await engine.AttachSurface(page, native_container_lease, surface_state)
+# Foreground focus remains a separate authorized request:
+await engine.RequestFocus(surface, approved_focus_intent)
 ```
 
 Revocation immediately stops new unauthorized core submissions and cancels
@@ -498,7 +518,7 @@ the page can undo an email, purchase, or other external effect.
 
 Source basis: Chromium **152.0.7977.42**, commit
 `db8ceb709fe92f3bb010fb982d6300e54de6dc6a`, recorded in
-[upstream.json](upstream.json). These are source-level findings, not compiled or
+[upstream.json](chromium/upstream.json). These are source-level findings, not compiled or
 runtime-verified mappings. The following links are pinned to that revision.
 
 | Upstream interface | Finding that shapes v0 |
@@ -526,7 +546,7 @@ Proposed internal units, not files or classes that already exist:
 - **Runtime/bootstrap:** Content delegates/clients, resources, native loop, and shutdown.
 - **Context registry:** browser-context ownership, allocations, network/storage services, and teardown.
 - **Page registry:** content ownership, stable-to-live identity binding, document lifetimes, and navigation correlation.
-- **Presentation bridge:** platform leases, native view binding, coordinates, accessibility/IME, and focus intent.
+- **Presentation bridge:** embedder-owned content surfaces, borrowed native-container leases, coordinates, accessibility/IME, and explicit host focus requests.
 - **Decision bridge:** typed snapshots, popup reservations, request continuations, invalidation, and quotas.
 - **Host bridge:** owned events/results, state snapshots, backpressure, and any eventual C/Rust transport.
 
@@ -548,7 +568,7 @@ ordered state events, one native attachment, and unload-aware close/shutdown.
 Default unsupported privilege requests to explicit denial. Then add the scoped
 decision bridge and the tested background-input path before claiming v0 complete.
 
-The v0 acceptance scenarios are [ENG-001 through ENG-008](../../docs/contracts/engine-capabilities.md).
+The v0 acceptance scenarios are [ENG-001 through ENG-008](../docs/contracts/engine-capabilities.md).
 In particular, demonstrate stale-target rejection, actual cookie/site-storage
 separation, unload refusal, native focus preservation, revoked/expired requests,
 renderer failure, and an engine upgrade on synthetic profiles. These are product

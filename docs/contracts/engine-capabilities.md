@@ -1,13 +1,15 @@
 # Engine capability evidence
 
 **Status:** draft acceptance requirements for the Pliant-owned Chromium
-embedder. No runtime capability is implemented or tested. This is not a frozen
-SDK. The [decision](../decisions/0001-own-chromium-embedding.md) selects the
-integration approach; it does not supply evidence that the approach works.
+embedder. The narrower Rust/macOS MVP has
+[real native load/paint/history/close evidence](../../embedder/chromium/BUILDING.md#verified-native-mvp-results),
+but none of the complete acceptance scenarios below has been qualified. This is
+not a frozen SDK. The [decision](../decisions/0001-own-chromium-embedding.md)
+selects the integration approach; it is not itself runtime evidence.
 
 ## Evidence rules
 
-- **Unverified:** no qualifying real-engine/platform evidence is recorded.
+- **Unverified:** the complete scenario has not been qualified with real-engine/platform evidence; narrower partial evidence may exist.
 - **Tested:** the scenario passed for the named revision, build, OS, architecture, and display configuration, with reproducible evidence.
 - **Unsupported:** the named configuration cannot satisfy the requirement; record why and the user-visible failure. Never silently substitute another account or privileged service.
 - A failing run remains failing evidence, not a reason to label a requirement supported. Link the failure and track the correction.

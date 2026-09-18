@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "address_open": "new_page",
+  "root": {
+    "type": "row",
+    "id": "workspace-root",
+    "gap": 10,
+    "children": [
+      {
+        "type": "column",
+        "id": "workspace-sidebar",
+        "gap": 8,
+        "children": [
+          {
+            "type": "label",
+            "id": "workspace-title",
+            "text": "Workspace"
+          },
+          {
+            "type": "address_field",
+            "id": "workspace-address",
+            "placeholder": "Open in a new page"
+          },
+          {
+            "type": "button",
+            "id": "workspace-new-page",
+            "label": "Add page",
+            "command": {
+              "type": "new_page"
+            }
+          },
+          {
+            "type": "page_list",
+            "id": "workspace-page-list"
+          },
+          {
+            "type": "spacer",
+            "id": "workspace-sidebar-space",
+            "size": 16
+          },
+          {
+            "type": "button",
+            "id": "workspace-close-page",
+            "label": "Close selected",
+            "command": {
+              "type": "close"
+            }
+          }
+        ]
+      },
+      {
+        "type": "column",
+        "id": "workspace-main",
+        "gap": 6,
+        "children": [
+          {
+            "type": "row",
+            "id": "workspace-navigation",
+            "gap": 6,
+            "children": [
+              {
+                "type": "button",
+                "id": "workspace-back",
+                "label": "Back",
+                "command": {
+                  "type": "back"
+                }
+              },
+              {
+                "type": "button",
+                "id": "workspace-forward",
+                "label": "Forward",
+                "command": {
+                  "type": "forward"
+                }
+              },
+              {
+                "type": "label",
+                "id": "workspace-context",
+                "text": "Focused page"
+              },
+              {
+                "type": "button",
+                "id": "workspace-start",
+                "label": "Start",
+                "command": {
+                  "type": "navigate",
+                  "url": "https://example.com/"
+                }
+              }
+            ]
+          },
+          {
+            "type": "content_surface",
+            "id": "workspace-content"
+          }
+        ]
+      }
+    ]
+  }
+}

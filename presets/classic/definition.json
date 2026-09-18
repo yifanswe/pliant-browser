@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "address_open": "current_page",
+  "root": {
+    "type": "column",
+    "id": "classic-root",
+    "gap": 6,
+    "children": [
+      {
+        "type": "row",
+        "id": "classic-tabs",
+        "gap": 6,
+        "children": [
+          {
+            "type": "page_list",
+            "id": "classic-page-list"
+          },
+          {
+            "type": "spacer",
+            "id": "classic-tab-space",
+            "size": 8
+          },
+          {
+            "type": "button",
+            "id": "classic-new-page",
+            "label": "New page",
+            "command": {
+              "type": "new_page"
+            }
+          },
+          {
+            "type": "button",
+            "id": "classic-close-page",
+            "label": "Close",
+            "command": {
+              "type": "close"
+            }
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "id": "classic-toolbar",
+        "gap": 6,
+        "children": [
+          {
+            "type": "button",
+            "id": "classic-back",
+            "label": "Back",
+            "command": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "button",
+            "id": "classic-forward",
+            "label": "Forward",
+            "command": {
+              "type": "forward"
+            }
+          },
+          {
+            "type": "address_field",
+            "id": "classic-address",
+            "placeholder": "Search or enter address"
+          },
+          {
+            "type": "button",
+            "id": "classic-home",
+            "label": "Home",
+            "command": {
+              "type": "navigate",
+              "url": "https://example.com/"
+            }
+          }
+        ]
+      },
+      {
+        "type": "content_surface",
+        "id": "classic-content"
+      }
+    ]
+  }
+}

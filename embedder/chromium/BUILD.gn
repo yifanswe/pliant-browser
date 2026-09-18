@@ -1,0 +1,143 @@
+# Expose embedder/ as //pliant_mvp in the pinned Chromium source tree.
+# No dependency on headless, content_shell, Chrome UI, or a DevTools client.
+import("//build/config/mac/rules.gni")
+import("//content/public/app/mac_helpers.gni")
+import("//third_party/icu/config.gni")
+import("//tools/grit/repack.gni")
+import("//tools/v8_context_snapshot/v8_context_snapshot.gni")
+import("//ui/gl/features.gni")
+import("//v8/gni/v8.gni")
+
+assert(is_mac, "The first native-window MVP targets macOS.")
+
+repack("resources") {
+  sources = [
+    "$root_gen_dir/content/content_resources.pak",
+    "$root_gen_dir/net/net_resources.pak",
+    "$root_gen_dir/third_party/blink/public/resources/blink_resources.pak",
+    "$root_gen_dir/third_party/blink/public/resources/blink_scaled_resources_100_percent.pak",
+    "$root_gen_dir/third_party/blink/public/strings/blink_strings_en-US.pak",
+    "$root_gen_dir/third_party/blink/public/strings/permission_element_generated_strings.pak",
+    "$root_gen_dir/third_party/blink/public/strings/permission_element_strings_en-US.pak",
+    "$root_gen_dir/ui/resources/ui_resources_100_percent.pak",
+    "$root_gen_dir/ui/strings/app_locale_settings_en-US.pak",
+    "$root_gen_dir/ui/strings/auto_image_annotation_strings_en-US.pak",
+    "$root_gen_dir/ui/strings/ax_strings_en-US.pak",
+    "$root_gen_dir/ui/strings/ui_strings_en-US.pak",
+  ]
+  deps = [
+    "//content:content_resources",
+    "//net:net_resources",
+    "//third_party/blink/public:resources",
+    "//third_party/blink/public:scaled_resources_100_percent",
+    "//third_party/blink/public/strings",
+    "//third_party/blink/public/strings:permission_element_generated_strings",
+    "//third_party/blink/public/strings:permission_element_strings",
+    "//ui/resources",
+    "//ui/strings",
+  ]
+  output = "$root_out_dir/pliant.pak"
+}
+
+bundle_data("runtime_resources") {
+  sources = [ "$root_out_dir/pliant.pak" ]
+  public_deps = [ ":resources" ]
+  if (icu_use_data_file) {
+    sources += [ "$root_out_dir/icudtl.dat" ]
+    public_deps += [ "//third_party/icu:icudata" ]
+  }
+  if (v8_use_external_startup_data) {
+    if (use_v8_context_snapshot) {
+      sources += [ "$root_out_dir/$v8_context_snapshot_filename" ]
+      public_deps += [ "//tools/v8_context_snapshot" ]
+    } else {
+      sources += [ "$root_out_dir/snapshot_blob.bin" ]
+      public_deps += [ "//v8" ]
+    }
+  }
+  sources += [ "//ui/gl/resources/angle-metal/gpu_shader_cache.bin" ]
+  outputs = [ "{{bundle_resources_dir}}/{{source_file_part}}" ]
+}
+
+foreach(helper, content_mac_helpers) {
+  mac_app_bundle("helper_${helper[0]}") {
+    output_name = "PliantHelper${helper[2]}"
+    sources = [
+      "helper_mac.cc",
+      "//pliant_mvp/public/c/bridge.h",
+    ]
+    deps = [
+      "//base/allocator:early_zone_registration_apple",
+      "//sandbox/mac:seatbelt",
+    ]
+    if (is_component_build) {
+      # The packaged executable is under the framework's versioned Helpers
+      # directory. Seatbelt and libc++ must load from the development output
+      # before main(), before the helper can dlopen the Content framework.
+      ldflags = [ "-Wl,-rpath,@executable_path/../../../../../../../../../.." ]
+    }
+    info_plist = "helper.plist"
+    extra_substitutions = [ "HELPER_ID_SUFFIX=${helper[1]}" ]
+  }
+}
+
+bundle_data("helpers") {
+  sources = []
+  public_deps = []
+  foreach(helper, content_mac_helpers) {
+    sources += [ "$root_out_dir/PliantHelper${helper[2]}.app" ]
+    public_deps += [ ":helper_${helper[0]}" ]
+  }
+  outputs = [ "{{bundle_contents_dir}}/Helpers/{{source_file_part}}" ]
+}
+
+bundle_data("graphics_libraries") {
+  sources = []
+  public_deps = []
+  if (!use_static_angle) {
+    sources += [
+      "$root_out_dir/egl_intermediates/libEGL.dylib",
+      "$root_out_dir/egl_intermediates/libGLESv2.dylib",
+    ]
+    public_deps += [ "//ui/gl:angle_library_copy" ]
+  }
+  sources += [
+    "$root_out_dir/vk_intermediates/libvk_swiftshader.dylib",
+    "$root_out_dir/vk_intermediates/vk_swiftshader_icd.json",
+    "$root_out_dir/vulkan_intermediates/libvulkan.dylib",
+  ]
+  public_deps += [
+    "//ui/gl:swiftshader_vk_library_copy",
+    "//ui/gl:vulkan_loader_library_copy",
+  ]
+  outputs = [ "{{bundle_contents_dir}}/Libraries/{{source_file_part}}" ]
+}
+
+mac_framework_bundle("pliant_content") {
+  output_name = "PliantContent"
+  framework_version = "A"
+  framework_contents = [ "Helpers", "Libraries", "Resources" ]
+  info_plist = "framework.plist"
+  sources = [
+    "bridge.mm",
+    "//pliant_mvp/public/c/bridge.h",
+  ]
+  deps = [
+    "//base",
+    "//content/public/app",
+    "//content/public/browser",
+    "//content/public/common",
+    "//services/network/public/mojom",
+    "//ui/base",
+    "//ui/display",
+    "//ui/gfx",
+    "//url",
+  ]
+  bundle_deps = [ ":helpers", ":runtime_resources", ":graphics_libraries" ]
+  frameworks = [ "AppKit.framework", "Foundation.framework" ]
+  ldflags = [
+    "-Wl,-install_name,@rpath/PliantContent.framework/PliantContent",
+    # Component dylibs remain next to development app bundles in this output.
+    "-Wl,-rpath,@loader_path/../../../../../..",
+  ]
+}

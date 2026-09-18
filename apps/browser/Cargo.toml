@@ -1,0 +1,24 @@
+[package]
+name = "pliant-browser"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "pliant-browser"
+path = "src/main.rs"
+required-features = ["native-runtime"]
+
+[features]
+default = []
+native-runtime = ["dep:pliant-embedder"]
+
+[dependencies]
+pliant-embedder = { path = "../../embedder/public/rust", optional = true }
+pliant-ui-definition = { path = "../../ui/definition" }
+
+[lints.rust]
+unsafe_code = "deny"

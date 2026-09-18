@@ -8,6 +8,8 @@ Pliant proposes infrastructure that lets users and their AI build a personal web
 
 This document records the design direction, not implemented guarantees. DSL syntax, engine integration, plugin isolation, and compatibility policy still require design and validation.
 
+**Current first demo:** let users define their own browser independently, quickly, and safely. Prove a real customization and recovery loop without a built-in agent. The AI-native sections below are future ideas to revisit, not prerequisites for this demo.
+
 ## Change your own browser's behavior should not need a pull request and wait for approval
 
 You want an Arc-style workspace. Someone else wants a traditional tab bar. You want account-aware routing and a quiet background agent. Someone else wants a different password manager, download policy, or session workflow.
@@ -130,6 +132,40 @@ If a UI customization cannot run on a new version, the browser should preserve i
 **A personal sidebar must never hold a security update hostage.** Updating the foundation must remain possible even when affected plugin operations are disabled.
 
 Stable contracts do not mean immutable implementation. They mean deliberate versioning, supported compatibility windows, and explicit handling of breaking changes.
+
+## Agents are native participants, not only code authors
+
+**Future direction, deferred from the first customization demo.** Agent implementation, model/data policy, and external coding-agent collaboration are not current decisions or work items.
+
+Pliant should ship a built-in agent service that improves everyday browsing and collaborates with the user's coding agent. Supporting an external agent connection is not enough. AI should participate in browser behavior, not merely add a chat box to the interface.
+
+### Improve everyday browsing
+
+With the user's permission, the built-in agent can use current content and browsing behavior to anticipate useful actions. It might predict a likely next URL and request preloading, recommend related content, or help organize an ongoing browsing session. These examples illustrate the goal; they do not define its limits.
+
+The agent should work with browser services in both directions: consume relevant events and context, and provide assistance that those services can use. Routine improvements should not require a chat prompt. Browser input and navigation must not wait for a model response; inference should use bounded background work and reuse results where appropriate.
+
+Prediction is separate from execution. For example, the agent proposes preload candidates; the page service and engine decide whether and how to load them safely. Speculative loading can make network requests and expose browsing intent. It must respect account boundaries, privacy settings, resource budgets, and restrictions on prerendering and external effects.
+
+### Help the browser grow through use
+
+The built-in agent should help users express what they want to change, using authorized knowledge of their current browser and workflow. It should turn an incomplete request into a clearer goal through dialogue, not force users to write a complete implementation prompt themselves.
+
+The user's coding agent should be able to exchange questions, scoped context, proposed changes, and preview results with the built-in agent. The built-in agent contributes browser context and user feedback; the coding agent implements changes through the customization toolchain. Neither agent substitutes its own agreement for the user's authority.
+
+The intended loop is: use the browser, identify a need, clarify it together, implement a change, try it in a preview, refine it, and enable it. Relevant context is shared explicitly; collaboration does not grant the coding agent unrestricted browsing history or credentials. Activation and rollback remain platform operations, not model promises.
+
+### Participate through native service contracts
+
+A runtime agent should run as a separate process and register with the platform through Mojo inter-process communication (IPC). The trusted platform admits the process, establishes its identity, and grants access to specific Pliant service interfaces. The agent can then call those services directly through typed Mojo interfaces, without driving the human's UI. It can also provide a service where the platform contract permits it.
+
+Registration and service discovery do not grant unrestricted access. Services must enforce the agent's granted scope, including account and page boundaries, and support revocation. Mojo supplies communication, not Pliant's service registry, authorization policy, or a complete security boundary. Process separation alone does not replace sandboxing and permission enforcement.
+
+Agents should depend on versioned Pliant contracts, not arbitrary Chromium-internal Mojo interfaces. Direct service calls need not pass through a central agent controller, but they must preserve platform authorization and operation tracking. Users must be able to inspect agent activity and stop further access without closing their own browsing session.
+
+The built-in experience is a product responsibility, not a requirement to use one fixed model, agent implementation, or chat interface. Users should be able to replace or disable the agent. Ordinary browsing and previously generated customizations must continue to work without a running agent.
+
+This is a platform design direction, not an implemented capability or an addition to the initial embedder MVP.
 
 ## Human and agent, at the same time
 

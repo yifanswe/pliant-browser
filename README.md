@@ -10,11 +10,15 @@ Pliant proposes a browser-building platform where users and their AI can replace
 
 We also plan to provide **one or more ready-to-use browsers**: convenient defaults and reference implementations built through the same public interfaces available to everyone.
 
-The repository includes a [module scaffold](MODULES.md), an accepted decision to
-[own the Chromium embedding layer](docs/decisions/0001-own-chromium-embedding.md),
-and a pinned Chromium source baseline. There is no working browser or
-engine integration yet. The core language, native UI framework, UI DSL, and
-plugin runtime remain open.
+The repository includes a working macOS arm64 vertical slice: a Pliant-owned
+Chromium Content embedder, its Rust trusted-host API, an independent manual API
+test app, a bounded JSON UI-definition crate, two distinct definitions, and a
+native customization-demo browser. Chromium source, dependencies, and build
+outputs remain in a separately provisioned workspace at the pinned revision.
+
+This is not yet a complete or cross-platform browser platform. Core service
+contracts, plugin isolation, recovery, broader engine capabilities, Linux, and
+Windows remain planned work; see the [implemented module map](MODULES.md).
 
 ## Customization with safety guards
 

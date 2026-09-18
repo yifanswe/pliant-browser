@@ -7,5 +7,6 @@ tests.
 **Boundary:** fixtures must contain synthetic data only—never personal profiles,
 cookies, credentials, history, or copied private artifacts.
 
-**Status:** scaffold only; no browser fixtures exist. See the
-[module map](../../MODULES.md).
+**Status:** this shared fixture directory remains a scaffold. Current synthetic
+fixtures are owned by `apps/browser` and `apps/embedder_test` because they test
+those applications directly. See the [module map](../../MODULES.md).

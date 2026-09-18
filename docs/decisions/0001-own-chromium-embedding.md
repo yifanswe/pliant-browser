@@ -10,7 +10,7 @@ selected supporting components. This supersedes the earlier CEF-backend plan.
 We are not forking the full Chromium browser application or adopting its tabs,
 settings UI, extension model, and product policies.
 
-The implementation belongs in [engine/chromium/README.md](../../engine/chromium/README.md).
+The implementation belongs in [`embedder/`](../../embedder/README.md).
 Its public boundary remains the engine-neutral contracts owned by core, not
 Chromium's C++ object model.
 
@@ -76,7 +76,7 @@ to preserve a customization.
 
 ## First evidence and stop conditions
 
-Start with the [source-build preparation](../../engine/chromium/BUILDING.md) and
+Start with the [source-build preparation](../../embedder/chromium/BUILDING.md) and
 [capability matrix](../contracts/engine-capabilities.md). A source pin and build
 instructions are not a working embedder.
 

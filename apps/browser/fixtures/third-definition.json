@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "address_open": "current_page",
+  "root": {
+    "type": "row",
+    "id": "third-root",
+    "children": [
+      {
+        "type": "content_surface",
+        "id": "third-content"
+      },
+      {
+        "type": "column",
+        "id": "third-controls",
+        "gap": 8,
+        "children": [
+          {
+            "type": "label",
+            "id": "third-title",
+            "text": "Independent JSON layout"
+          },
+          {
+            "type": "address_field",
+            "id": "third-address",
+            "placeholder": "Navigate this page"
+          },
+          {
+            "type": "page_list",
+            "id": "third-pages"
+          },
+          {
+            "type": "button",
+            "id": "third-back",
+            "label": "Back",
+            "command": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "button",
+            "id": "third-close",
+            "label": "Close",
+            "command": {
+              "type": "close"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

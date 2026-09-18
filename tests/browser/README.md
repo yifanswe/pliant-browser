@@ -6,6 +6,9 @@ permissions, lifecycle, and supported desktop-platform scenarios.
 **Boundary:** passing model or scaffold checks cannot substitute for these
 tests. Platform claims require evidence from the named platform.
 
-**Status:** scaffold only; Chromium is not integrated and no browser test exists.
-The [capability matrix](../../docs/contracts/engine-capabilities.md) defines the
-initial required evidence. See the [module map](../../MODULES.md).
+**Status:** this cross-module suite remains a scaffold. Implemented module-local
+behavior tests live in [`apps/browser/tests/`](../../apps/browser/tests/) and
+the independent manual/native API host lives in
+[`apps/embedder_test/`](../../apps/embedder_test/). Those narrower tests do not
+qualify the complete scenarios in the
+[capability matrix](../../docs/contracts/engine-capabilities.md).

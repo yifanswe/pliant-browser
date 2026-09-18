@@ -8,13 +8,31 @@ Build infrastructure that lets users and their chosen coding agents create a per
 
 **Design principle: flexibility of customization with safety guards.**
 
-This is an implementation roadmap, not a record of completed browser work. The repository currently contains design documents, concept illustrations, a module-boundary scaffold, a pinned Chromium source baseline, and an existing repository structure check. It does not contain a working browser, Content embedder, native shell, DSL compiler, plugin runtime, or SDK.
+This is an implementation roadmap, not a record of completed browser work. The repository contains design documents, concept illustrations, a module-boundary scaffold, a pinned Chromium baseline, and active Rust/native embedder MVP source. Native runtime acceptance is separate from source availability or Rust type checking. The full browser platform, DSL, plugin runtime, and native agent integration remain future work.
 
-The first proof is deliberately concrete:
+The [repository layout](docs/repository-layout.md) now reflects the implemented
+source migration. The Rust host API is under `embedder/public/rust/`, the
+canonical C ABI under `embedder/public/c/`, Chromium integration under
+`embedder/chromium/`, and executable compositions under `apps/`. This ownership
+change does not expand the current embedder MVP.
 
-> One Pliant-owned Chromium embedder behind core contracts, two substantially different interfaces, a replaceable account-routing service, and a human browsing while an agent works in another profile without stealing focus.
+## Current priority: a user-defined browser demo
 
-A second proof is equally important: upgrade the foundation while keeping an existing customization usable without an AI repair step.
+**The first product demo lets users define their own browser independently, quickly, and safely. It does not require an agent service.**
+
+First finish the existing embedder MVP and its independent native test app. Then prove the customization loop on that real engine. A user edits a small local definition, previews a different interface and a bounded browser-behavior change, and explicitly applies or rejects it. The customization uses platform contracts rather than patches to core or Chromium.
+
+The minimum acceptance scope is:
+
+- Two visibly different layouts over the same real browser capabilities, not merely a color/theme change.
+- One meaningful behavior change through a declared contract, without building a general-purpose plugin system first.
+- A short edit-to-preview loop that does not rebuild Chromium for a customization change.
+- Rejection of invalid definitions and unauthorized operations, plus a working way to restore the default experience.
+- Independent end-to-end execution of customization and ordinary browsing, not only schema tests or screenshots of static mockups.
+
+The user can author the definition directly or use their existing coding tools. Browser-native agent integration, predictive assistance, model/privacy/budget choices, and coding-agent-to-browser-agent collaboration are deferred. Do not ask for those choices or implement their scaffolding to unblock this demo. AI-native ideas remain a future direction to revisit, not an immediate delivery commitment.
+
+The stages below describe the broader roadmap, not a requirement to finish every stage before this demo. Take only the minimal UI, behavior, validation, and preview mechanisms needed for the acceptance scope above. Cross-platform hardening, generalized providers, and full upgrade compatibility remain later work; do not claim those guarantees from the demo.
 
 ## 1. Decisions and boundaries
 
@@ -26,7 +44,7 @@ A second proof is equally important: upgrade the foundation while keeping an exi
 | Complete customization | Support replacement of the whole UI and substantial browser services and policies, not just themes or fixed plugin slots. |
 | Stable core | Custom code uses public contracts. It cannot patch core implementation or bypass core invariants. |
 | No browser-extension compatibility | Do not implement Chrome/Firefox extension APIs or support installing their extension packages. This is an explicit non-goal, not deferred work. |
-| Local coding agents | Support existing agents through ordinary developer tools. Do not require a built-in model or a new agent runtime. |
+| Native runtime and coding agents | Ship built-in browsing assistance and collaboration with the user's coding agent. Keep the implementation replaceable and support existing developer tools without requiring one fixed model. |
 | Lightweight operation | Measure distribution footprint, memory, startup, and idle activity separately. Do not reduce isolation to improve a headline metric. |
 
 The core language, native UI framework, DSL syntax, plugin execution technology, minimum OS versions, and supported CPU architectures remain open. The initial Content integration uses Chromium's C++ interfaces and platform glue as required; that does not choose the language of the portable core or a Rust/C++ boundary. Resolve remaining choices through the first feasibility stage.
@@ -49,25 +67,31 @@ Separate three responsibilities:
 
 An official service may need privileges that a layout does not need. Those privileges must be declared and enforced through the same grant mechanism available to another authorized implementation. Official presets must not depend on undocumented shortcuts.
 
-### Proposed repository boundaries
+### Implemented and scaffold boundaries
 
-Product paths remain scaffolds; no product API is implemented or frozen.
-Build integration for the Content
-embedder will use the pinned Chromium source workspace, not a standalone
-prebuilt browser as an SDK.
+The table below records current paths. Most platform modules remain scaffolds;
+the implemented vertical slice is concentrated in `apps/`, `embedder/`,
+`ui/definition/`, and the two preset definitions. Its native build uses the
+pinned external Chromium source workspace, not a standalone prebuilt browser
+as an SDK.
 
 | Path | Responsibility |
 | --- | --- |
 | `docs/decisions/` | Architecture decisions and rejected alternatives. |
 | `docs/contracts/` | Observable behavior, permissions, lifecycle, and compatibility promises. |
-| [engine/chromium/README.md](engine/chromium/README.md) | Content embedding, selected service integration, upstream adaptation, and translation into Pliant contracts. |
+| [`apps/browser/`](apps/browser/) | Native customization-demo composition and trusted preview/apply/reject/recovery controls. |
+| [`apps/embedder_test/`](apps/embedder_test/) | Independent manual and automated public embedder API test app. |
+| [`embedder/public/rust/`](embedder/public/rust/) | Rust trusted-host API and native framework linkage. |
+| [`embedder/public/c/`](embedder/public/c/) | Canonical narrow C ABI shared by Rust and Chromium integration. |
+| [embedder/chromium/](embedder/chromium/) | Content embedding, native helpers/resources, pinned build integration, and upstream adaptation. |
 | `core/` | Trusted identities, operations, policy enforcement, and state ownership. |
 | `platform/` | Native windowing, OS credential facilities, packaging, and device integration. |
-| `ui/` | DSL schema, validation, evaluation, and native rendering. |
+| [`ui/definition/`](ui/definition/) | Implemented bounded JSON schema, validation, state transitions, and address-open policy. |
+| `ui/` | Broader future DSL bindings and native rendering boundary. |
 | `plugins/runtime/` | Plugin isolation, grants, lifecycle, and service registration. |
 | `plugins/reference/` | Official replaceable service implementations. |
-| `presets/workspace/` | Workspace-oriented reference browser. |
-| `presets/classic/` | Traditional tab-oriented reference browser. |
+| `presets/workspace/` | Implemented workspace-oriented demo definition and future reference package. |
+| `presets/classic/` | Implemented traditional demo definition and future reference package. |
 | `tools/` | Capability inspection, validation, preview, diagnostics, and packaging. |
 | `tests/fixtures/` | Controlled websites, disposable profiles, and known migration inputs. |
 | `tests/contracts/` | Tests of stable behavior shared by all presets. |
@@ -85,7 +109,7 @@ Separate browser data from customization packages. A shared UI package must not 
 
 The [embedding decision](docs/decisions/0001-own-chromium-embedding.md), initial
 [capability requirements](docs/contracts/engine-capabilities.md), and
-[source-build preparation](engine/chromium/BUILDING.md) are recorded. They are
+[source-build preparation](embedder/chromium/BUILDING.md) are recorded. They are
 not runtime evidence. Record the native/runtime stack decision after the spike.
 
 Work in this order:
@@ -116,7 +140,7 @@ missing build evidence with mock engine claims or checkout-only test suites.
 
 **Question:** Can one simple browser run entirely through the intended public contracts?
 
-Implement the [Chromium embedder](engine/chromium/README.md), the initial core contracts, and a temporary native UI.
+Implement the [Chromium embedder](embedder/README.md), the initial core contracts, and a temporary native UI.
 
 Work packages:
 
@@ -180,10 +204,13 @@ Implement:
 - Explicit task creation with profile and operation grants.
 - Task-page association, progress, errors, and an action history.
 - Agent operations that use core capabilities without driving the customizable human UI.
+- A built-in agent that uses authorized content and browsing signals to improve ordinary browsing, not only respond in a chat box. Start with one useful predictive or recommendation scenario.
 - Pause, cancellation, inspection, and handoff to the human.
 - Per-page and per-task cleanup with exact ownership tracking.
 
-Start with a deterministic test client. Integrate an existing coding agent once the contract works; do not use model success as the only correctness test. Choose the agent transport after the operation contract, not before it.
+Start with a deterministic out-of-process test client over the intended Mojo contract. Then integrate the built-in agent implementation; keep external coding-agent collaboration in Stage 4. Do not use model success as the only correctness test. Validate interface semantics, process bootstrap, and language bindings separately.
+
+For the selected everyday-assistance scenario, compare the outcome against a non-agent baseline. Measure usefulness and wasted work, including latency, network activity, and resource use. Do not count displaying a suggestion or issuing a preload request as proof of improvement. Slow or unavailable inference must not block ordinary browsing.
 
 The primary acceptance scenario is:
 
@@ -228,7 +255,9 @@ Do not give every preview real account access. Grant access explicitly for tests
 
 **Gate:** two independent coding agents complete a UI change and a behavior-plugin change using the public documentation and toolchain. Review the resulting diffs and run the same platform tests. A human can use the complete loop without AI.
 
-Do not require a hosted generation service, embedded model, or private agent-only API.
+The built-in agent and the user's coding agent must support a bidirectional customization loop: clarify the user's goal, exchange scoped browser context and questions, implement a proposal, inspect the preview, and refine it from user feedback. Test that collaboration end to end, including denied context access and a rejected change. A one-way prompt export is not sufficient.
+
+Use documented, permissioned collaboration interfaces. An adapter can connect an existing coding agent to the native service contract; its transport remains to be validated. Do not require a hosted generation service or one embedded model. Ordinary developer commands remain usable without an agent.
 
 ### Stage 5: Prove upgrades and recovery
 
