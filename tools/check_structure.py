@@ -13,7 +13,7 @@ from urllib.parse import unquote, urlsplit
 REQUIRED_DIRECTORIES = (
     "docs/contracts",
     "docs/decisions",
-    "engine/cef",
+    "engine/chromium",
     "core",
     "platform/macos",
     "platform/linux",

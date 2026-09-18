@@ -10,20 +10,11 @@ Pliant proposes a browser-building platform where users and their AI can replace
 
 We also plan to provide **one or more ready-to-use browsers**: convenient defaults and reference implementations built through the same public interfaces available to everyone.
 
-The repository now includes a documentation-only
-[module scaffold](MODULES.md). It defines intended ownership and dependency
-boundaries without choosing the host language, native UI framework, UI DSL, or
-plugin runtime.
-
-Check the scaffold and local Markdown links with:
-
-```sh
-python3 tools/check_structure.py
-python3 -m unittest discover -s tests -p "test_*.py"
-```
-
-These commands test repository structure only. They do not build, run, or test
-a browser.
+The repository includes a [module scaffold](MODULES.md), an accepted decision to
+[own the Chromium embedding layer](docs/decisions/0001-own-chromium-embedding.md),
+and a pinned Chromium source baseline. There is no working browser or
+engine integration yet. The core language, native UI framework, UI DSL, and
+plugin runtime remain open.
 
 ## Customization with safety guards
 
@@ -37,7 +28,7 @@ The core should enforce safety boundaries while users change their experience. I
 
 | Component | Purpose |
 | --- | --- |
-| **Web-engine abstraction** | Stable browser capabilities over CEF (Chromium Embedded Framework). |
+| **Web-engine abstraction** | Stable browser capabilities over a Pliant-owned Chromium Content embedder. |
 | **Profile and data management** | Isolated accounts, cookies, passwords, permissions, and persistent data. |
 | **Plugin runtime** | Extensible services and behavior with permissions and failure isolation. |
 | **Declarative UI engine** | A concise DSL for complete interfaces and platform-specific desktop layouts. |
@@ -46,7 +37,7 @@ The core should enforce safety boundaries while users change their experience. I
 
 ## Help shape Pliant
 
-The initial engine backend is **CEF (Chromium Embedded Framework)**, targeting **Linux, macOS, and Windows** with native UI, without Electron. Mobile is deferred. DSL syntax, native UI framework, and plugin execution remain open decisions.
+The engine direction is **our own embedding layer over Chromium's Content API and selected components**, targeting **Linux, macOS, and Windows** with native UI, without Electron. We reuse Chromium's web infrastructure, not its complete browser application or CEF. Mobile is deferred. DSL syntax, native UI framework, and plugin execution remain open decisions.
 
 Bring a browser experience you want to build. The useful question is **which capabilities should the platform guarantee, and which decisions should users control?**
 

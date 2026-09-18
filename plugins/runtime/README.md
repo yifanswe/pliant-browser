@@ -4,7 +4,7 @@
 resource limits, cancellation, conflicts, and service registration.
 
 **Boundary:** plugins use explicit service contracts and cannot patch core,
-access platform or CEF internals, or gain authority from a returned value.
+access platform or Chromium internals, or gain authority from a returned value.
 Chrome and Firefox extension compatibility is out of scope. The execution
 technology and protocol remain undecided.
 

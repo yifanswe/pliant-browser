@@ -8,5 +8,10 @@ diagnostics, activation, and recovery commands.
 product language. Tools expose and inspect product behavior but do not own
 upgrade policy, durable migration state, or the trusted recovery path.
 
-**Status:** `check_structure.py` checks this scaffold and local Markdown links.
-No browser development toolchain exists. See the [module map](../MODULES.md).
+**Status:** [check_structure.py](check_structure.py) checks required paths and
+local Markdown links. No product build/preview toolchain exists yet. Do not add
+scaffold or checkout-only validators and tests as a substitute for implementing
+the browser; new tests should protect meaningful product behavior or regressions.
+
+See [source-build preparation](../engine/chromium/BUILDING.md) for actual build
+prerequisites and [the module map](../MODULES.md) for ownership.

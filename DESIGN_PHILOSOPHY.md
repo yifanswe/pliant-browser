@@ -8,7 +8,7 @@ Pliant proposes infrastructure that lets users and their AI build a personal web
 
 This document records the design direction, not implemented guarantees. DSL syntax, engine integration, plugin isolation, and compatibility policy still require design and validation.
 
-## Your browser should not need a pull request
+## Change your own browser's behavior should not need a pull request and wait for approval
 
 You want an Arc-style workspace. Someone else wants a traditional tab bar. You want account-aware routing and a quiet background agent. Someone else wants a different password manager, download policy, or session workflow.
 
@@ -26,7 +26,7 @@ The platform has six responsibilities:
 
 | Component | Responsibility |
 | --- | --- |
-| Web-engine abstraction | Stable page, rendering, navigation, input, and lifecycle contracts, initially backed by CEF. |
+| Web-engine abstraction | Stable page, rendering, navigation, input, and lifecycle contracts over a Pliant-owned Chromium Content embedder. |
 | Profile and data management | Account isolation, passwords, passkeys, cookies, site storage, permissions, history, bookmarks, and session data, with extensible providers and policies. |
 | Plugin runtime | Service replacement, event hooks, permissions, resource limits, conflict handling, and failure isolation. |
 | Declarative UI engine | A concise language for complete interfaces, state bindings, and interactions, with desktop and mobile layout variants. |
@@ -77,9 +77,9 @@ The DSL would describe layouts, observable state, local presentation models, and
 
 This distinction matters: arbitrary Swift code does not become safe because its UI uses SwiftUI. A declarative language is not a sandbox either. Runtime enforcement must make the boundaries real.
 
-The first engine backend is CEF (Chromium Embedded Framework), targeting Linux, macOS, and Windows. CEF hosts web content; Pliant provides its own native UI without Electron. Start with one backend behind stable contracts rather than implementing multiple engines at once. The DSL syntax, native UI framework, and plugin runtime remain open. Compatibility with Chrome/Firefox extensions is explicitly out of scope.
+Pliant will own its embedding layer over Chromium's Content API and selected components, targeting Linux, macOS, and Windows. We reuse Chromium's rendering, networking, storage, and process-security mechanisms, not its full browser application. This [decision](docs/decisions/0001-own-chromium-embedding.md) supersedes the CEF plan and makes us responsible for integration and upstream adaptation; it does not prove that direct embedding is inherently more malleable or safer. Pliant provides its own native UI without Electron. Start with one backend behind stable contracts rather than implementing multiple engines at once. The core language, DSL syntax, native UI framework, and plugin runtime remain open. Compatibility with Chrome/Firefox extensions is explicitly out of scope.
 
-Lightweight operation remains a goal, not a measured result. Bundling CEF has a distribution cost; startup time, memory, and power consumption require real measurements.
+Lightweight operation remains a goal, not a measured result. Building and distributing Chromium infrastructure has a cost; startup time, memory, and power consumption require real measurements. Removing an embedding framework does not automatically reduce those costs.
 
 ## Native customization, not extension compatibility
 

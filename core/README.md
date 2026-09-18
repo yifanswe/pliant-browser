@@ -12,7 +12,7 @@
   embedding replaceable routing, credential, download, session, or UI policy.
 
 **Boundary:** core exposes versioned contracts; it never depends on a preset,
-reference plugin, UI implementation, developer tool, or CEF internal type.
+reference plugin, UI implementation, developer tool, or Chromium internal type.
 
 **Status:** scaffold only; no data model or operation API is frozen. See the
 [module map](../MODULES.md).

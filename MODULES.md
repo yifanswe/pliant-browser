@@ -1,8 +1,10 @@
 # Module map
 
-This map defines the intended repository boundaries. Every product module is a
-scaffold only; names, contracts, and implementation languages remain subject to
-the evidence and decisions in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+This map defines the intended repository boundaries. Product modules remain
+scaffolds; the existing repository structure check is not a browser implementation.
+The [embedding decision](docs/decisions/0001-own-chromium-embedding.md) is accepted;
+contracts and remaining stack choices require the evidence described in
+[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 ## Modules and allowed dependencies
 
@@ -11,7 +13,7 @@ the evidence and decisions in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 | [`docs/contracts/`](docs/contracts/) | Observable behavior, permissions, lifecycle, and compatibility promises | No product module |
 | [`docs/decisions/`](docs/decisions/) | Recorded architecture decisions and rejected alternatives | Evidence from any module |
 | [`core/`](core/) | Trusted identities, profile/data integrity, operations, tasks, authorization, and recovery coordination | Contracts only |
-| [`engine/cef/`](engine/cef/) | CEF hosting and translation at the engine boundary | Core public interfaces and contracts |
+| [engine/chromium/README.md](engine/chromium/README.md) | Pliant-owned Content embedder, Chromium service/native integration, pinned source builds, and upstream adaptation | Core public interfaces and contracts; selected Chromium public interfaces/components internally |
 | [`platform/macos/`](platform/macos/), [`platform/linux/`](platform/linux/), [`platform/windows/`](platform/windows/) | OS integration, native hosting, packaging, and update integration | Core and engine public interfaces, contracts |
 | [`ui/`](ui/) | Future UI language, validation, evaluation, and native rendering boundary | Core and platform public interfaces, contracts |
 | [`plugins/runtime/`](plugins/runtime/) | Plugin grants, isolation, lifecycle, and service registration | Core public interfaces and contracts |
@@ -21,7 +23,7 @@ the evidence and decisions in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 | [`tests/`](tests/) | Contract, browser, security, upgrade, and fixture evidence | Any public test surface required by a scenario |
 
 Dependencies point toward contracts and trusted mechanisms. Presets and plugins
-must not access CEF, platform internals, or core implementation details. Core
+must not access Chromium, platform internals, or core implementation details. Core
 must not depend on a preset, UI policy, reference plugin, or developer tool.
 Platform adapters must not choose browser-product policy.
 
@@ -31,7 +33,7 @@ Platform adapters must not choose browser-product policy.
 - **Classic preset:** a structurally different tab-oriented reference browser.
 
 Both outputs must use the same public contracts available to personal packages.
-Neither preset, browser binary, native shell, nor CEF integration exists yet.
+Neither preset, browser binary, native shell, nor Content embedder exists yet.
 
 ## Upgrades and recovery
 
@@ -41,7 +43,7 @@ developer tools:
 | Concern | Owner |
 | --- | --- |
 | Core data integrity, migration coordination, activation state, and the trusted recovery state machine | `core/` |
-| CEF profile-format compatibility, engine-data backup boundaries, and engine migration evidence | `engine/cef/` |
+| Chromium source/dependency baseline, upstream adaptation, engine-data compatibility, backup boundaries, and migration evidence | [engine/chromium/README.md](engine/chromium/README.md) |
 | Signed update and packaging integration for each OS | The corresponding `platform/` adapter |
 | UI package compatibility and deterministic UI-package migrations | `ui/`, coordinated through core recovery |
 | Plugin compatibility, grant revalidation, disablement, and quarantine | `plugins/runtime/`, coordinated through core recovery |

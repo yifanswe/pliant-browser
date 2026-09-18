@@ -8,11 +8,11 @@ Build infrastructure that lets users and their chosen coding agents create a per
 
 **Design principle: flexibility of customization with safety guards.**
 
-This is an implementation roadmap, not a record of completed work. The repository currently contains design documents, concept illustrations, a module-boundary scaffold, and a repository structure check. It does not contain a working browser, CEF integration, native shell, DSL compiler, plugin runtime, or SDK.
+This is an implementation roadmap, not a record of completed browser work. The repository currently contains design documents, concept illustrations, a module-boundary scaffold, a pinned Chromium source baseline, and an existing repository structure check. It does not contain a working browser, Content embedder, native shell, DSL compiler, plugin runtime, or SDK.
 
 The first proof is deliberately concrete:
 
-> One CEF-backed core, two substantially different interfaces, a replaceable account-routing service, and a human browsing while an agent works in another profile without stealing focus.
+> One Pliant-owned Chromium embedder behind core contracts, two substantially different interfaces, a replaceable account-routing service, and a human browsing while an agent works in another profile without stealing focus.
 
 A second proof is equally important: upgrade the foundation while keeping an existing customization usable without an AI repair step.
 
@@ -21,7 +21,7 @@ A second proof is equally important: upgrade the foundation while keeping an exi
 | Decided | Meaning |
 | --- | --- |
 | Desktop first | Target Linux, macOS, and Windows. Mobile is outside the current implementation scope. |
-| CEF backend | Use Chromium Embedded Framework (CEF) for web content. Start with one backend behind Pliant contracts. |
+| Own the Chromium embedder | Build on the Content API and selected supporting components, not CEF or the full Chromium browser application. Start with one backend behind Pliant contracts; see [ADR 0001](docs/decisions/0001-own-chromium-embedding.md). |
 | Native browser UI | Do not use Electron. The native rendering framework remains unselected. |
 | Complete customization | Support replacement of the whole UI and substantial browser services and policies, not just themes or fixed plugin slots. |
 | Stable core | Custom code uses public contracts. It cannot patch core implementation or bypass core invariants. |
@@ -29,7 +29,7 @@ A second proof is equally important: upgrade the foundation while keeping an exi
 | Local coding agents | Support existing agents through ordinary developer tools. Do not require a built-in model or a new agent runtime. |
 | Lightweight operation | Measure distribution footprint, memory, startup, and idle activity separately. Do not reduce isolation to improve a headline metric. |
 
-The core language, native UI framework, DSL syntax, plugin execution technology, minimum OS versions, and supported CPU architectures remain open. Resolve these through the first feasibility stage, not through assumptions in this document.
+The core language, native UI framework, DSL syntax, plugin execution technology, minimum OS versions, and supported CPU architectures remain open. The initial Content integration uses Chromium's C++ interfaces and platform glue as required; that does not choose the language of the portable core or a Rust/C++ boundary. Resolve remaining choices through the first feasibility stage.
 
 ### What Arc and Neo contribute to the plan
 
@@ -51,15 +51,16 @@ An official service may need privileges that a layout does not need. Those privi
 
 ### Proposed repository boundaries
 
-These paths now exist as documentation-only scaffolds. They remain proposed
-implementation targets: no product module or API is implemented, and file
-extensions and build commands will follow the selected languages.
+Product paths remain scaffolds; no product API is implemented or frozen.
+Build integration for the Content
+embedder will use the pinned Chromium source workspace, not a standalone
+prebuilt browser as an SDK.
 
 | Path | Responsibility |
 | --- | --- |
 | `docs/decisions/` | Architecture decisions and rejected alternatives. |
 | `docs/contracts/` | Observable behavior, permissions, lifecycle, and compatibility promises. |
-| `engine/cef/` | CEF integration and translation into Pliant contracts. |
+| [engine/chromium/README.md](engine/chromium/README.md) | Content embedding, selected service integration, upstream adaptation, and translation into Pliant contracts. |
 | `core/` | Trusted identities, operations, policy enforcement, and state ownership. |
 | `platform/` | Native windowing, OS credential facilities, packaging, and device integration. |
 | `ui/` | DSL schema, validation, evaluation, and native rendering. |
@@ -70,7 +71,7 @@ extensions and build commands will follow the selected languages.
 | `tools/` | Capability inspection, validation, preview, diagnostics, and packaging. |
 | `tests/fixtures/` | Controlled websites, disposable profiles, and known migration inputs. |
 | `tests/contracts/` | Tests of stable behavior shared by all presets. |
-| `tests/browser/` | Real CEF and native-window scenarios. |
+| `tests/browser/` | Real Chromium embedder and native-window scenarios. |
 | `tests/security/` | Permission, isolation, and adversarial scenarios. |
 | `tests/upgrade/` | Old-package compatibility, migrations, and recovery. |
 
@@ -78,25 +79,34 @@ Separate browser data from customization packages. A shared UI package must not 
 
 ## 3. Delivery sequence
 
-### Stage 0: Validate CEF integration and choose the remaining stack
+### Stage 0: Build the Chromium embedder spike and choose the remaining stack
 
 **Question:** Can the selected integration support the product's hard requirements on all three desktop platforms?
 
-Create `docs/contracts/scenarios.md`, `docs/contracts/engine-capabilities.md`, and `docs/decisions/0001-desktop-runtime.md`.
+The [embedding decision](docs/decisions/0001-own-chromium-embedding.md), initial
+[capability requirements](docs/contracts/engine-capabilities.md), and
+[source-build preparation](engine/chromium/BUILDING.md) are recorded. They are
+not runtime evidence. Record the native/runtime stack decision after the spike.
 
 Work in this order:
 
-1. Define the smallest end-to-end scenario: profile A remains under human control while a task page opens in profile B.
-2. Select an exact CEF distribution for a disposable spike. Record Chromium version, package source, platform, and architecture.
-3. Test native view embedding, resize, input focus, keyboard navigation, input methods, and accessibility exposure.
-4. Test two persistent profiles using controlled sites. Verify actual cookie and site-storage isolation and persistence after restart.
-5. Test background page creation and input without activating the human's window or changing the active tab.
-6. Test popup disposition, upload/download dialogs, permission requests, PDF handling, and renderer failure.
-7. Investigate credential and passkey integration separately. CEF embedding is not evidence of Chrome password-manager parity.
-8. Compare windowed and offscreen rendering only where needed. Record compositor, input, accessibility, and resource trade-offs.
-9. Select the host language, native renderer, and candidate plugin isolation approach from this evidence.
+1. Use the smallest end-to-end scenario: profile A remains under human control while a task page opens in profile B. Define exact targets, pending decisions, and observable failure states before writing the engine port.
+2. Provision an external Chromium source workspace at the pinned revision. Synchronize dependencies/toolchains and validate the baseline. Record source/dependency state, patch set, GN arguments, SDK, platform, and architecture. A prebuilt Chromium browser is not a Content embedding SDK.
+3. Implement the minimal Content bootstrap and native view host, starting on macOS arm64. Review each required component and default delegate; do not ship content-shell test defaults or depend on the full browser target. Preserve sandboxing and record startup/shutdown behavior.
+4. Test native view embedding, resize, input focus, keyboard navigation, input methods, and accessibility exposure.
+5. Wire two persistent browser contexts and their storage/services to core-selected profiles. Verify actual cookie and site-storage isolation and persistence after restart; do not infer isolation from object count.
+6. Test background page creation and input without activating the human's window or changing the active tab.
+7. Wire and test popup disposition, upload/download dialogs, permission requests, and renderer failure. Investigate PDF/printing as explicit component integrations, not automatic Content features.
+8. Investigate credential and passkey integration separately. Content embedding is not evidence of Chrome password-manager parity or access to vendor services.
+9. Compare native content-view hosting and offscreen composition only where needed. Record compositor, input, accessibility, and resource trade-offs.
+10. Select the core language, native renderer, any Rust/C++ boundary, and candidate plugin isolation approach from this evidence.
 
 A spike can begin on one development machine. The stage is not complete until the hard-boundary checks have run on Linux, macOS, and Windows. Linux display-server variants and CPU coverage must be recorded explicitly.
+
+**Build capacity:** source acquisition and compilation need a deliberately
+provisioned workspace and matching upstream dependencies/toolchains. A source
+pin is not evidence of a successful build or working embedder. Do not replace
+missing build evidence with mock engine claims or checkout-only test suites.
 
 **Gate:** publish a capability matrix with tested, unsupported, and unverified states. Do not disable sandboxing to make the integration pass. If a hard requirement fails, revise the integration before writing the general-purpose DSL.
 
@@ -106,7 +116,7 @@ A spike can begin on one development machine. The stage is not complete until th
 
 **Question:** Can one simple browser run entirely through the intended public contracts?
 
-Implement `engine/cef/`, the initial `core/` contracts, and a temporary native UI.
+Implement the [Chromium embedder](engine/chromium/README.md), the initial core contracts, and a temporary native UI.
 
 Work packages:
 
@@ -122,7 +132,7 @@ Record the initial contracts in `docs/contracts/pages.md`, `profiles.md`, `opera
 
 Specify operation semantics before implementation. For example, a stale page ID must produce a defined error rather than act on a replacement page. Repeated close requests must have an explicit outcome. A rejected permission request must not leave a half-created privileged operation.
 
-Use controlled fixtures for form state, separate account cookies, downloads, popups, and renderer errors. Use normal CEF storage facilities behind the adapter; do not attempt to recreate browser cookie security in a general application database.
+Use controlled fixtures for form state, separate account cookies, downloads, popups, and renderer errors. Use Chromium's storage facilities behind the embedder; do not attempt to recreate browser cookie security in a general application database.
 
 **Gate:** the minimal UI can browse through public operations, profile data survives restart, and cross-profile leakage tests fail when isolation is deliberately broken. Verify required close-confirmation handling and that an isolated renderer failure leaves unrelated profile data intact.
 
@@ -238,13 +248,13 @@ Build old-package fixtures and retain the original bytes in `tests/upgrade/`. Th
 
 1. Upgrade Pliant with a compatible old UI and plugin. Neither requires an AI call.
 2. Apply a deterministic supported migration and verify data preservation.
-3. Upgrade between two real CEF versions. Verify profile data and operation semantics, not only compilation.
+3. Build the embedder against two real Chromium revisions. Verify profile data and operation semantics, not only compilation; record upstream API adaptations and patch changes.
 4. Load an unsupported UI package. Preserve it and offer the trusted default interface.
 5. Load an incompatible credential or routing plugin. Stop affected operations; do not silently choose a different account or security policy.
 6. Interrupt an upgrade and verify the documented recovery procedure.
 7. Apply a security update while an incompatible customization remains disabled.
 
-Do not promise arbitrary downgrades of engine profile data. CEF or storage migrations may make binary rollback unsafe. Define backups, restore boundaries, and migration journals where applicable; test recovery on copies before touching user data.
+Do not promise arbitrary downgrades of engine profile data. Chromium or storage migrations may make binary rollback unsafe. Define backups, restore boundaries, and migration journals where applicable; test recovery on copies before touching user data.
 
 **Gate:** an old compatible customization works after an actual foundation upgrade with AI disabled. An incompatible one cannot block security updates or silently change privileged behavior.
 
@@ -291,7 +301,7 @@ Use the following layers:
 | Static validation | Known type, schema, dependency, and capability mismatches are rejected. |
 | Unit and model tests | State transitions and local policy behavior match the contract. |
 | Property and fault tests | Defined invariants survive generated inputs, interrupted operations, and failures. |
-| Browser integration | CEF behavior, profiles, permissions, and native-window handling match the intended operation. |
+| Browser integration | Real Chromium embedder behavior, profiles, permissions, and native-window handling match the intended operation. |
 | Preset/plugin conformance | The same guarantees apply to different interfaces and service implementations. |
 | Upgrade tests | Old packages and data receive the documented compatibility or recovery behavior. |
 | Human usability review | The interface is understandable and practical, beyond mechanically passing tests. |
@@ -322,16 +332,16 @@ Resolve these before the dependent work proceeds:
 
 | Decision | Evidence needed |
 | --- | --- |
-| Native UI framework | CEF embedding, full layout replacement, accessibility, input methods, platform reach, and measured overhead. |
+| Native UI framework | Content-view embedding, full layout replacement, accessibility, input methods, platform reach, and measured overhead. |
 | UI language design | Both reference presets can be expressed without internal patches or unrestricted host-code escape hatches. |
 | Plugin runtime | Enforceable grants, cancellation/resource limits, failure isolation, portability, and acceptable startup cost. |
 | Data and identity model | Persistent multi-profile behavior, engine storage constraints, and recoverable local customization state. |
 | Compatibility policy | Supported version windows, deterministic migrations, and explicit treatment of unavailable privileged services. |
-| Distribution and licensing | CEF and dependency obligations, project license, signing/update ownership, and tested release targets. |
+| Distribution and licensing | Chromium/component dependency obligations, project license, source-build capacity, signing/update ownership, and tested release targets. |
 
 Stop and revise the architecture if independent customization requires patching core internals, if profile isolation cannot be demonstrated, or if a failed plugin can bypass the recovery path.
 
-A platform API gap is not permission to disable a security boundary. A missing test machine is not evidence of cross-platform support.
+A platform API gap is not permission to disable a security boundary. A missing test machine is not evidence of cross-platform support. Owning the embedder also means sustaining timely Chromium security updates; revisit the approach if that becomes unmaintainable.
 
 ## 7. What not to build yet
 
@@ -341,7 +351,7 @@ Do not attempt to copy all Arc or Neo features. One polished reference browser, 
 
 ## Completion criteria for the first public prototype
 
-- [ ] A shared CEF adapter operates through Pliant contracts on Linux, macOS, and Windows.
+- [ ] A Pliant-owned Chromium Content embedder operates through Pliant contracts on Linux, macOS, and Windows.
 - [ ] Two distinct UI presets work without private core access.
 - [ ] A user can replace one meaningful behavior service through the plugin contract.
 - [ ] A human-agent background scenario passes with verified profile and focus behavior.
